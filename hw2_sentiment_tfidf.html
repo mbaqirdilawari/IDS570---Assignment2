@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.38">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Muhammad Baqir">
+
+<title>Homework 2: Sentiment Analysis and TF-IDF</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="hw2_sentiment_tfidf_files/libs/clipboard/clipboard.min.js"></script>
+<script src="hw2_sentiment_tfidf_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="hw2_sentiment_tfidf_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="hw2_sentiment_tfidf_files/libs/quarto-html/popper.min.js"></script>
+<script src="hw2_sentiment_tfidf_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="hw2_sentiment_tfidf_files/libs/quarto-html/anchor.min.js"></script>
+<link href="hw2_sentiment_tfidf_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="hw2_sentiment_tfidf_files/libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="hw2_sentiment_tfidf_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="hw2_sentiment_tfidf_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="hw2_sentiment_tfidf_files/libs/bootstrap/bootstrap-138a6193a3bd40baf1e627da441a4734.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="hw2_sentiment_tfidf.md"><i class="bi bi-file-code"></i>Github (GFM)</a></li></ul></div></div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Homework 2: Sentiment Analysis and TF-IDF</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Muhammad Baqir </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="setup" class="level2">
+<h2 class="anchored" data-anchor-id="setup">Setup</h2>
+<p>Loading packages.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(readr)     <span class="co"># reading text files</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)     <span class="co"># editing tables</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyr)     <span class="co"># reshaping tables</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(stringr)   <span class="co"># find-and-replace on text</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidytext)  <span class="co"># tokenizing, stopwords, Bing lexicon</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(quanteda)  <span class="co"># DFM and TF-IDF</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+</section>
+<section id="part-i-raw-count-sentiment-analysis" class="level2">
+<h2 class="anchored" data-anchor-id="part-i-raw-count-sentiment-analysis">Part I: Raw-Count Sentiment Analysis</h2>
+<section id="step-1-tokenize-and-clean-the-text" class="level3">
+<h3 class="anchored" data-anchor-id="step-1-tokenize-and-clean-the-text">Step 1: Tokenize and clean the text</h3>
+<p>Reading all three texts. The third text (A06785) is needed later for TF-IDF, so all three are cleaned together using the same decisions.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>circle_raw <span class="ot">&lt;-</span> <span class="fu">read_file</span>(<span class="st">"texts/A07594__Circle_of_Commerce.txt"</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>free_raw   <span class="ot">&lt;-</span> <span class="fu">read_file</span>(<span class="st">"texts/B14801__Free_Trade.txt"</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>third_raw  <span class="ot">&lt;-</span> <span class="fu">read_file</span>(<span class="st">"texts/A06785.txt"</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>texts_all <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">doc_title =</span> <span class="fu">c</span>(<span class="st">"Circle of Commerce"</span>, <span class="st">"Free Trade"</span>, <span class="st">"A06785"</span>),</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">text      =</span> <span class="fu">c</span>(circle_raw, free_raw, third_raw)</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Normalizing the text: long s to s, collapsing extra whitespace, lowercasing.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>texts_all <span class="ot">&lt;-</span> texts_all <span class="sc">%&gt;%</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">text_norm =</span> text <span class="sc">%&gt;%</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>      <span class="fu">str_replace_all</span>(<span class="st">"ſ"</span>, <span class="st">"s"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>      <span class="fu">str_replace_all</span>(<span class="st">"</span><span class="sc">\\</span><span class="st">s+"</span>, <span class="st">" "</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>      <span class="fu">str_to_lower</span>()</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Preview: the first 300 characters of each text, before and after cleaning</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>texts_all <span class="sc">%&gt;%</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">before =</span> <span class="fu">str_sub</span>(text, <span class="dv">1</span>, <span class="dv">300</span>),</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">after  =</span> <span class="fu">str_sub</span>(text_norm, <span class="dv">1</span>, <span class="dv">300</span>)</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(doc_title, before, after) <span class="sc">%&gt;%</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="at">width =</span> <span class="cn">Inf</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 3 × 3
+  doc_title         
+  &lt;chr&gt;             
+1 Circle of Commerce
+2 Free Trade        
+3 A06785            
+  before                                                                        
+  &lt;chr&gt;                                                                         
+1 THE CIRCLE OF COMMERCE. The Prooeme. HERODOTVS in his CLIO, reportes that CRO…
+2 CAP. I. The Causes of the want of Money in England. IT hauing pleased God to …
+3 STrong imagination, nourished by opinion, may cause most men to suppose, that…
+  after                                                                         
+  &lt;chr&gt;                                                                         
+1 the circle of commerce. the prooeme. herodotvs in his clio, reportes that cro…
+2 cap. i. the causes of the want of money in england. it hauing pleased god to …
+3 strong imagination, nourished by opinion, may cause most men to suppose, that…</code></pre>
+</div>
+</div>
+<p>Tokenizing into one row per word, removing stopwords, and keeping only words made of plain letters (this removes numbers and stray symbols).</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(<span class="st">"stop_words"</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>tokens_clean <span class="ot">&lt;-</span> texts_all <span class="sc">%&gt;%</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(doc_title, text_norm) <span class="sc">%&gt;%</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unnest_tokens</span>(word, text_norm) <span class="sc">%&gt;%</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anti_join</span>(stop_words, <span class="at">by =</span> <span class="st">"word"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">str_detect</span>(word, <span class="st">"^[a-z]+$"</span>))</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Preview:</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(tokens_clean, <span class="dv">10</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 10 × 2
+   doc_title          word     
+   &lt;chr&gt;              &lt;chr&gt;    
+ 1 Circle of Commerce circle   
+ 2 Circle of Commerce commerce 
+ 3 Circle of Commerce prooeme  
+ 4 Circle of Commerce herodotvs
+ 5 Circle of Commerce clio     
+ 6 Circle of Commerce reportes 
+ 7 Circle of Commerce croesvs  
+ 8 Circle of Commerce king     
+ 9 Circle of Commerce lydia    
+10 Circle of Commerce sonne    </code></pre>
+</div>
+</div>
+<p>Checking the result: the number of words per document, and confirming that no long s remains.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>tokens_clean <span class="sc">%&gt;%</span> <span class="fu">count</span>(doc_title)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 3 × 2
+  doc_title              n
+  &lt;chr&gt;              &lt;int&gt;
+1 A06785             12733
+2 Circle of Commerce 12972
+3 Free Trade          8024</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(<span class="fu">str_detect</span>(tokens_clean<span class="sc">$</span>word, <span class="st">"ſ"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0</code></pre>
+</div>
+</div>
+<p><strong>Preprocessing decisions (used for both Part I and Part II):</strong></p>
+<ul>
+<li>The long s (ſ) was converted to s.</li>
+<li>Extra whitespace was collapsed and all text was lowercased.</li>
+<li>Standard tidytext stopwords were removed.</li>
+<li>Only tokens, made entirely of letters were kept. This removes numbers and stray symbols.</li>
+</ul>
+<p>After cleaning, Circle of Commerce has 12,972 words, Free Trade has 8,024, and A06785 has 12,733.</p>
+</section>
+<section id="step-2-join-tokens-to-the-bing-sentiment-dictionary" class="level3">
+<h3 class="anchored" data-anchor-id="step-2-join-tokens-to-the-bing-sentiment-dictionary">Step 2: Join tokens to the Bing sentiment dictionary</h3>
+<p>Labeling each word as positive or negative using the Bing lexicon. Only words found in Bing are kept.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>bing <span class="ot">&lt;-</span> <span class="fu">get_sentiments</span>(<span class="st">"bing"</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>tokens_sentiment <span class="ot">&lt;-</span> tokens_clean <span class="sc">%&gt;%</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(bing, <span class="at">by =</span> <span class="st">"word"</span>, <span class="at">relationship =</span> <span class="st">"many-to-many"</span>)</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Preview:</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(tokens_sentiment, <span class="dv">10</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 10 × 3
+   doc_title          word        sentiment
+   &lt;chr&gt;              &lt;chr&gt;       &lt;chr&gt;    
+ 1 Circle of Commerce danger      negative 
+ 2 Circle of Commerce death       negative 
+ 3 Circle of Commerce ready       positive 
+ 4 Circle of Commerce violent     negative 
+ 5 Circle of Commerce danger      negative 
+ 6 Circle of Commerce kill        negative 
+ 7 Circle of Commerce errors      negative 
+ 8 Circle of Commerce exquisite   positive 
+ 9 Circle of Commerce flourishing positive 
+10 Circle of Commerce eminent     positive </code></pre>
+</div>
+</div>
+<p>Note: a few words in the Bing lexicon are labeled both positive and negative, which is why <code>relationship = "many-to-many"</code> is set. Such a word is counted once as positive and once as negative, so it has no effect on net sentiment.</p>
+<p>Checking how many positive and negative words were found in each document.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>tokens_sentiment <span class="sc">%&gt;%</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(doc_title, sentiment)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 6 × 3
+  doc_title          sentiment     n
+  &lt;chr&gt;              &lt;chr&gt;     &lt;int&gt;
+1 A06785             negative    680
+2 A06785             positive    703
+3 Circle of Commerce negative    422
+4 Circle of Commerce positive    489
+5 Free Trade         negative    281
+6 Free Trade         positive    344</code></pre>
+</div>
+</div>
+</section>
+<section id="step-3-compute-raw-sentiment-totals" class="level3">
+<h3 class="anchored" data-anchor-id="step-3-compute-raw-sentiment-totals">Step 3: Compute raw sentiment totals</h3>
+<p>Keeping only the two texts we are comparing (Circle of Commerce &amp; Free Trade), then collapsing to one row per document with positive, negative, and net sentiment counts.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>raw_sentiment <span class="ot">&lt;-</span> tokens_sentiment <span class="sc">%&gt;%</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(doc_title <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"Circle of Commerce"</span>, <span class="st">"Free Trade"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(doc_title) <span class="sc">%&gt;%</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">raw_positive =</span> <span class="fu">sum</span>(sentiment <span class="sc">==</span> <span class="st">"positive"</span>),</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">raw_negative =</span> <span class="fu">sum</span>(sentiment <span class="sc">==</span> <span class="st">"negative"</span>),</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">.groups =</span> <span class="st">"drop"</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">raw_net =</span> raw_positive <span class="sc">-</span> raw_negative)</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Preview: the raw sentiment summary table</span></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>raw_sentiment</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 2 × 4
+  doc_title          raw_positive raw_negative raw_net
+  &lt;chr&gt;                     &lt;int&gt;        &lt;int&gt;   &lt;int&gt;
+1 Circle of Commerce          489          422      67
+2 Free Trade                  344          281      63</code></pre>
+</div>
+</div>
+<p><strong>Observation:</strong> Both texts have a small positive net score (67 for Circle of Commerce and 63 for Free Trade). However, Circle of Commerce is about 60% longer, so it naturally contains more sentiment words of both kinds. Raw counts do not adjust for document length.</p>
+</section>
+</section>
+<section id="part-ii-tf-idf-weighted-sentiment-analysis" class="level2">
+<h2 class="anchored" data-anchor-id="part-ii-tf-idf-weighted-sentiment-analysis">Part II: TF-IDF-Weighted Sentiment Analysis</h2>
+<section id="step-4-compute-tf-idf-for-words-in-each-document" class="level3">
+<h3 class="anchored" data-anchor-id="step-4-compute-tf-idf-for-words-in-each-document">Step 4: Compute TF-IDF for words in each document</h3>
+<p>Building the quanteda DFM from the same cleaned tokens used in Part I (tokens_clean), so the preprocessing decisions are identical. All three documents are included so that IDF has more information to work with.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Grouping the cleaned words into one list per document</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>toks_list <span class="ot">&lt;-</span> <span class="fu">split</span>(tokens_clean<span class="sc">$</span>word, tokens_clean<span class="sc">$</span>doc_title)</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Turn that list into a quanteda tokens object</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>toks <span class="ot">&lt;-</span> <span class="fu">as.tokens</span>(toks_list)</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Build the document-feature matrix (rows = documents, columns = words)</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>dfm_mat <span class="ot">&lt;-</span> <span class="fu">dfm</span>(toks)</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Preview: size of the DFM and the most frequent words overall</span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>dfm_mat</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Document-feature matrix of: 3 documents, 7,668 features (54.75% sparse) and 0
+docvars.
+                    features
+docs                 strong imagination nourished opinion suppose edward
+  A06785                  3           3         1      13       5      7
+  Circle of Commerce      0           1         0       1       3      2
+  Free Trade              0           0         0       1       1      1
+                    features
+docs                 misselden sallust allenger babylon
+  A06785                    36       1        1       1
+  Circle of Commerce         0       0        0       0
+  Free Trade                 0       0        0       0
+[ reached max_nfeat ... 7,658 more features ]</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>top_words <span class="ot">&lt;-</span> <span class="fu">topfeatures</span>(dfm_mat, <span class="dv">15</span>)</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="fu">tibble</span>(<span class="at">word =</span> <span class="fu">names</span>(top_words), <span class="at">count =</span> top_words)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 15 × 2
+   word        count
+   &lt;chr&gt;       &lt;dbl&gt;
+ 1 trade         618
+ 2 exchange      478
+ 3 merchants     308
+ 4 commodities   293
+ 5 money         290
+ 6 moneys        267
+ 7 haue          249
+ 8 hath          213
+ 9 kingdome      188
+10 cloth         180
+11 thereof       163
+12 malynes       162
+13 bee           159
+14 time          148
+15 price         146</code></pre>
+</div>
+</div>
+<p>Applying TF-IDF weighting to the DFM, using quanteda’s default settings.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>dfm_tfidf_mat <span class="ot">&lt;-</span> <span class="fu">dfm_tfidf</span>(dfm_mat)</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Preview: the TF-IDF matrix and the highest-weighted words overall</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>dfm_tfidf_mat</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Document-feature matrix of: 3 documents, 7,668 features (54.75% sparse) and 0
+docvars.
+                    features
+docs                   strong imagination nourished opinion suppose edward
+  A06785             1.431364   0.5282738 0.4771213       0       0      0
+  Circle of Commerce 0          0.1760913 0               0       0      0
+  Free Trade         0          0         0               0       0      0
+                    features
+docs                 misselden   sallust  allenger   babylon
+  A06785              17.17637 0.4771213 0.4771213 0.4771213
+  Circle of Commerce   0       0         0         0        
+  Free Trade           0       0         0         0        
+[ reached max_nfeat ... 7,658 more features ]</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>top_tfidf_words <span class="ot">&lt;-</span> <span class="fu">topfeatures</span>(dfm_tfidf_mat, <span class="dv">15</span>)</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a><span class="fu">tibble</span>(<span class="at">word =</span> <span class="fu">names</span>(top_tfidf_words), <span class="at">tfidf =</span> top_tfidf_words)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 15 × 2
+   word     tfidf
+   &lt;chr&gt;    &lt;dbl&gt;
+ 1 moneys    47.0
+ 2 haue      43.8
+ 3 foreign   41.5
+ 4 kingdome  33.1
+ 5 ballance  32.4
+ 6 realm     30.5
+ 7 forraine  29.1
+ 8 malynes   28.5
+ 9 loss      28.2
+10 bee       28.0
+11 balance   24.8
+12 hee       23.1
+13 mony      22.2
+14 vpon      21.5
+15 native    19.1</code></pre>
+</div>
+</div>
+</section>
+<section id="step-5-convert-the-tf-idf-results-to-a-tidy-table" class="level3">
+<h3 class="anchored" data-anchor-id="step-5-convert-the-tf-idf-results-to-a-tidy-table">Step 5: Convert the TF-IDF results to a tidy table</h3>
+<p>Converting the TF-IDF DFM into a regular data frame. Reshaping it to one row per document-word pair. Removing rows with zero weights. Keeping only Circle of Commerce and Free Trade.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>tfidf_tidy <span class="ot">&lt;-</span> <span class="fu">convert</span>(dfm_tfidf_mat, <span class="at">to =</span> <span class="st">"data.frame"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">cols      =</span> <span class="sc">-</span>doc_id,</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">names_to  =</span> <span class="st">"word"</span>,</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">values_to =</span> <span class="st">"tfidf"</span></span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(tfidf <span class="sc">&gt;</span> <span class="dv">0</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(doc_id <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"Circle of Commerce"</span>, <span class="st">"Free Trade"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">doc_title =</span> doc_id)</span>
+<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Preview: the highest-weighted words, and how many words each document has left</span></span>
+<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a>tfidf_tidy <span class="sc">%&gt;%</span></span>
+<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(tfidf)) <span class="sc">%&gt;%</span></span>
+<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">head</span>(<span class="dv">10</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 10 × 3
+   doc_title          word     tfidf
+   &lt;chr&gt;              &lt;chr&gt;    &lt;dbl&gt;
+ 1 Circle of Commerce ballance  32.4
+ 2 Circle of Commerce forraine  29.1
+ 3 Circle of Commerce haue      28.7
+ 4 Circle of Commerce malynes   27.8
+ 5 Circle of Commerce mony      20.8
+ 6 Circle of Commerce hee       20.3
+ 7 Circle of Commerce kingdome  19.9
+ 8 Circle of Commerce bee       19.0
+ 9 Free Trade         haue      15.1
+10 Free Trade         kingdome  13.2</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>tfidf_tidy <span class="sc">%&gt;%</span> <span class="fu">count</span>(doc_title)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 2 × 2
+  doc_title              n
+  &lt;chr&gt;              &lt;int&gt;
+1 Circle of Commerce  3325
+2 Free Trade          2246</code></pre>
+</div>
+</div>
+</section>
+<section id="step-6-keep-only-sentiment-bearing-words" class="level3">
+<h3 class="anchored" data-anchor-id="step-6-keep-only-sentiment-bearing-words">Step 6: Keep only sentiment-bearing words</h3>
+<p>Joining the TF-IDF table to the Bing lexicon. This filters the existing TF-IDF results to sentiment words only. TF-IDF is not recalculated.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>tfidf_sentiment <span class="ot">&lt;-</span> tfidf_tidy <span class="sc">%&gt;%</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(bing, <span class="at">by =</span> <span class="st">"word"</span>, <span class="at">relationship =</span> <span class="st">"many-to-many"</span>)</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Preview: how many sentiment words remain in each document</span></span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>tfidf_sentiment <span class="sc">%&gt;%</span> <span class="fu">count</span>(doc_title, sentiment)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 4 × 3
+  doc_title          sentiment     n
+  &lt;chr&gt;              &lt;chr&gt;     &lt;int&gt;
+1 Circle of Commerce negative    164
+2 Circle of Commerce positive    108
+3 Free Trade         negative     90
+4 Free Trade         positive     74</code></pre>
+</div>
+</div>
+<p>Inspecting the sentiment-bearing words with the highest TF-IDF weights in each document, separately for positive and negative words. These are the words that drive the TF-IDF-weighted sentiment scores.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>top_sentiment_words <span class="ot">&lt;-</span> tfidf_sentiment <span class="sc">%&gt;%</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(doc_title, sentiment) <span class="sc">%&gt;%</span></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_max</span>(tfidf, <span class="at">n =</span> <span class="dv">8</span>, <span class="at">with_ties =</span> <span class="cn">FALSE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(doc_title, sentiment, <span class="fu">desc</span>(tfidf))</span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>top_sentiment_words <span class="sc">%&gt;%</span> <span class="fu">print</span>(<span class="at">n =</span> <span class="cn">Inf</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 32 × 4
+   doc_title          word        tfidf sentiment
+   &lt;chr&gt;              &lt;chr&gt;       &lt;dbl&gt; &lt;chr&gt;    
+ 1 Circle of Commerce impertinent 2.86  negative 
+ 2 Circle of Commerce imperfect   2.39  negative 
+ 3 Circle of Commerce meddle      1.91  negative 
+ 4 Circle of Commerce kill        1.43  negative 
+ 5 Circle of Commerce scandalous  1.43  negative 
+ 6 Circle of Commerce wrong       1.43  negative 
+ 7 Circle of Commerce forbid      1.43  negative 
+ 8 Circle of Commerce strictly    1.43  negative 
+ 9 Circle of Commerce passion     4.29  positive 
+10 Circle of Commerce divine      3.34  positive 
+11 Circle of Commerce affection   2.86  positive 
+12 Circle of Commerce humane      1.91  positive 
+13 Circle of Commerce holy        1.43  positive 
+14 Circle of Commerce wise        1.06  positive 
+15 Circle of Commerce favour      1.06  positive 
+16 Circle of Commerce grace       1.06  positive 
+17 Free Trade         imposition  3.34  negative 
+18 Free Trade         disorderly  2.86  negative 
+19 Free Trade         deficient   1.43  negative 
+20 Free Trade         pleas       1.43  negative 
+21 Free Trade         loose       1.41  negative 
+22 Free Trade         cruelty     0.954 negative 
+23 Free Trade         extortion   0.954 negative 
+24 Free Trade         repugnant   0.954 negative 
+25 Free Trade         peace       1.23  positive 
+26 Free Trade         happy       1.23  positive 
+27 Free Trade         richly      0.954 positive 
+28 Free Trade         wonderfully 0.954 positive 
+29 Free Trade         sincerity   0.954 positive 
+30 Free Trade         suffice     0.954 positive 
+31 Free Trade         protect     0.954 positive 
+32 Free Trade         mightily    0.954 positive </code></pre>
+</div>
+</div>
+<p><strong>Observation:</strong> After TF-IDF weighting, many of the highest-weighted sentiment words are not about trade (for example “divine”, “passion”, “holy” in Circle of Commerce). Some trade terms also appear to be misread by the modern Bing lexicon, for example “imposition” in Free Trade, which in this period could refer to a duty on goods.</p>
+</section>
+<section id="step-7-compute-tf-idf-weighted-sentiment-totals" class="level3">
+<h3 class="anchored" data-anchor-id="step-7-compute-tf-idf-weighted-sentiment-totals">Step 7: Compute TF-IDF-weighted sentiment totals</h3>
+<p>Summing the TF-IDF weights (not counting words) of positive and negative words for each document, then calculating net TF-IDF sentiment.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>tfidf_sentiment_summary <span class="ot">&lt;-</span> tfidf_sentiment <span class="sc">%&gt;%</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(doc_title, sentiment) <span class="sc">%&gt;%</span></span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">total_tfidf =</span> <span class="fu">sum</span>(tfidf), <span class="at">.groups =</span> <span class="st">"drop"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(</span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">names_from  =</span> sentiment,</span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">values_from =</span> total_tfidf,</span>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">values_fill =</span> <span class="dv">0</span></span>
+<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(</span>
+<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">tfidf_positive =</span> positive,</span>
+<span id="cb33-11"><a href="#cb33-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">tfidf_negative =</span> negative</span>
+<span id="cb33-12"><a href="#cb33-12" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb33-13"><a href="#cb33-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">tfidf_net =</span> tfidf_positive <span class="sc">-</span> tfidf_negative)</span>
+<span id="cb33-14"><a href="#cb33-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-15"><a href="#cb33-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Preview: the TF-IDF sentiment summary table</span></span>
+<span id="cb33-16"><a href="#cb33-16" aria-hidden="true" tabindex="-1"></a>tfidf_sentiment_summary</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 2 × 4
+  doc_title          tfidf_negative tfidf_positive tfidf_net
+  &lt;chr&gt;                       &lt;dbl&gt;          &lt;dbl&gt;     &lt;dbl&gt;
+1 Circle of Commerce           86.2           62.9     -23.3
+2 Free Trade                   44.2           32.7     -11.5</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="part-iii-compare-raw-vs.-tf-idf-sentiment" class="level2">
+<h2 class="anchored" data-anchor-id="part-iii-compare-raw-vs.-tf-idf-sentiment">Part III: Compare Raw vs.&nbsp;TF-IDF Sentiment</h2>
+<p>Combining the raw-count and TF-IDF-weighted summaries into one table (one row per document), and exporting it as a .csv file.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>sentiment_comparison <span class="ot">&lt;-</span> raw_sentiment <span class="sc">%&gt;%</span></span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(tfidf_sentiment_summary, <span class="at">by =</span> <span class="st">"doc_title"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(</span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>    doc_title,</span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>    raw_positive, raw_negative, raw_net,</span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>    tfidf_positive, tfidf_negative, tfidf_net</span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">starts_with</span>(<span class="st">"tfidf"</span>), <span class="sc">~</span> <span class="fu">round</span>(.x, <span class="dv">3</span>)))</span>
+<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-10"><a href="#cb35-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Preview: the final comparison table</span></span>
+<span id="cb35-11"><a href="#cb35-11" aria-hidden="true" tabindex="-1"></a>sentiment_comparison <span class="sc">%&gt;%</span> <span class="fu">print</span>(<span class="at">width =</span> <span class="cn">Inf</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 2 × 7
+  doc_title          raw_positive raw_negative raw_net tfidf_positive
+  &lt;chr&gt;                     &lt;int&gt;        &lt;int&gt;   &lt;int&gt;          &lt;dbl&gt;
+1 Circle of Commerce          489          422      67           62.9
+2 Free Trade                  344          281      63           32.7
+  tfidf_negative tfidf_net
+           &lt;dbl&gt;     &lt;dbl&gt;
+1           86.2     -23.3
+2           44.2     -11.5</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Save the table as a .csv file in the same folder as this notebook</span></span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a><span class="fu">write_csv</span>(sentiment_comparison, <span class="st">"sentiment_comparison.csv"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<section id="which-words-drove-the-change" class="level3">
+<h3 class="anchored" data-anchor-id="which-words-drove-the-change">Which words drove the change?</h3>
+<p>Finding the most frequent sentiment words in Part I that received a TF-IDF weight of zero in Part II (because they appear in all three texts). These words counted in the raw method but disappeared in the TF-IDF method.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a>dropped_words <span class="ot">&lt;-</span> tokens_sentiment <span class="sc">%&gt;%</span></span>
+<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(doc_title <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"Circle of Commerce"</span>, <span class="st">"Free Trade"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(doc_title, word, sentiment, <span class="at">name =</span> <span class="st">"raw_count"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb38-4"><a href="#cb38-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anti_join</span>(tfidf_sentiment, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"doc_title"</span>, <span class="st">"word"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb38-5"><a href="#cb38-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(doc_title, sentiment) <span class="sc">%&gt;%</span></span>
+<span id="cb38-6"><a href="#cb38-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice_max</span>(raw_count, <span class="at">n =</span> <span class="dv">8</span>, <span class="at">with_ties =</span> <span class="cn">FALSE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb38-7"><a href="#cb38-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ungroup</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb38-8"><a href="#cb38-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(doc_title, sentiment, <span class="fu">desc</span>(raw_count))</span>
+<span id="cb38-9"><a href="#cb38-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb38-10"><a href="#cb38-10" aria-hidden="true" tabindex="-1"></a>dropped_words <span class="sc">%&gt;%</span> <span class="fu">print</span>(<span class="at">n =</span> <span class="cn">Inf</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 32 × 4
+   doc_title          word      sentiment raw_count
+   &lt;chr&gt;              &lt;chr&gt;     &lt;chr&gt;         &lt;int&gt;
+ 1 Circle of Commerce decay     negative         14
+ 2 Circle of Commerce stranger  negative         13
+ 3 Circle of Commerce abuse     negative         12
+ 4 Circle of Commerce fall      negative         11
+ 5 Circle of Commerce false     negative         10
+ 6 Circle of Commerce mystery   negative          9
+ 7 Circle of Commerce lost      negative          8
+ 8 Circle of Commerce fallen    negative          7
+ 9 Circle of Commerce free      positive         29
+10 Circle of Commerce treasure  positive         18
+11 Circle of Commerce benefit   positive         14
+12 Circle of Commerce noble     positive         14
+13 Circle of Commerce respect   positive         14
+14 Circle of Commerce worthy    positive         14
+15 Circle of Commerce excellent positive         13
+16 Circle of Commerce worth     positive         13
+17 Free Trade         decay     negative         27
+18 Free Trade         false     negative         15
+19 Free Trade         abuse     negative         12
+20 Free Trade         strict    negative          7
+21 Free Trade         fallen    negative          6
+22 Free Trade         lost      negative          6
+23 Free Trade         abused    negative          5
+24 Free Trade         fall      negative          5
+25 Free Trade         remedy    positive         40
+26 Free Trade         treasure  positive         24
+27 Free Trade         liberty   positive         19
+28 Free Trade         benefit   positive         18
+29 Free Trade         respect   positive         10
+30 Free Trade         pleasure  positive          9
+31 Free Trade         ready     positive          8
+32 Free Trade         worthy    positive          7</code></pre>
+</div>
+</div>
+<ol type="1">
+<li>What changed between the two methods?</li>
+</ol>
+<p>The direction of the sentiment flipped. With raw counts, both texts came out slightly positive: Circle of Commerce at +67 (489 positive, 422 negative) and Free Trade at +63 (344 positive, 281 negative). Going by that alone, I would have said the two texts have almost the same tone. Once I weighted the words by TF-IDF, both texts turned negative. Circle of Commerce came to −23.31 and Free Trade at −11.50. The gap between them also got bigger. Under TF-IDF, Circle of Commerce carries about twice as much net negative weight as Free Trade, while under raw counts they were nearly equal.</p>
+<ol start="2" type="1">
+<li>Why did TF-IDF alter the results?</li>
+</ol>
+<p>TF-IDF gives zero weight to any word that shows up in all three texts, and rewards words that only show up in one or two. That turned out to matter a lot here, because many of the most common positive words are shared across all three documents. Words like “free” (29 times in Circle of Commerce), “remedy” (40 times in Free Trade) and “treasure” counted heavily in the raw method, but got a weight of zero under TF-IDF. Once those were gone, what was left were more rare words, and more of them were negative (164 negative vs 108 positive distinct words in Circle of Commerce, and 90 vs 74 in Free Trade). This does not mean the texts are negative. It means that the sentiment words each text uses on its own are mostly negative, while the sentiment words all three texts share are mostly positive. Also, with only three documents, IDF can only take three values. So a word used just a few times in one text can still get a high weight.</p>
+<ol start="3" type="1">
+<li>Which specific words drove the changes?</li>
+</ol>
+<p>I see two groups. The first is the frequent positive words that all three texts share and that TF-IDF wiped out: “free”, “treasure”, “benefit”, “remedy” and “liberty”. Several of these probably belong to the economic vocabulary of the debate rather than expressing any real feeling, which makes me question how much they should have counted in the raw score to begin with. The second group is the rare words that gained weight. In Circle of Commerce, the top negative words were “impertinent”, “imperfect” and “meddle”, and the top positive ones were “passion”, “divine” and “affection”. In Free Trade, the top negative words were “imposition” and “disorderly”, and the top positive ones were “peace” and “happy”. A lot of these have nothing to do with trade. Some also look misread by the Bing lexicon. “Imposition”, for example, could mean a duty on goods in the 1620s, but Bing treats it as negative word.</p>
+<ol start="4" type="1">
+<li>When would each method be more appropriate? What limitation does document length create for the raw-count measure?</li>
+</ol>
+<p>Raw counts are better when I want to know how much positive and negative language a text uses in total, including the common words it shares with the other texts. TF-IDF makes more sense when I want to know what is distinctive about one text’s sentiment compared to the others, for example how Misselden’s tone differs from his rivals. I would not use TF-IDF to say how positive or negative one particular document is, and its results depend heavily on which documents are in the corpus. The problem with raw counts is length. A longer text will simply have more positive and more negative words. After cleaning, Circle of Commerce has 12,972 words and Free Trade has 8,024. Their raw net scores look almost the same (+67 vs +63), but per 1,000 words, Free Trade is actually more positive (about 7.9 vs 5.2). Dividing by document length would make the raw comparison fairer.</p>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

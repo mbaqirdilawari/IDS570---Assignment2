@@ -1,0 +1,294 @@
+---
+title: "Homework 2: Sentiment Analysis and TF-IDF"
+author: "Muhammad Baqir"
+format:
+  html: default
+  gfm: default
+---
+
+## Setup
+
+Loading packages.
+
+```{r}
+#| message: false
+library(readr)     # reading text files
+library(dplyr)     # editing tables
+library(tidyr)     # reshaping tables
+library(stringr)   # find-and-replace on text
+library(tidytext)  # tokenizing, stopwords, Bing lexicon
+library(quanteda)  # DFM and TF-IDF
+```
+
+## Part I: Raw-Count Sentiment Analysis
+
+### Step 1: Tokenize and clean the text
+
+Reading all three texts. The third text (A06785) is needed later for TF-IDF, so all three are cleaned together using the same decisions.
+
+```{r}
+circle_raw <- read_file("texts/A07594__Circle_of_Commerce.txt")
+free_raw   <- read_file("texts/B14801__Free_Trade.txt")
+third_raw  <- read_file("texts/A06785.txt")
+
+texts_all <- tibble(
+  doc_title = c("Circle of Commerce", "Free Trade", "A06785"),
+  text      = c(circle_raw, free_raw, third_raw)
+)
+```
+
+Normalizing the text: long s to s, collapsing extra whitespace, lowercasing.
+
+```{r}
+texts_all <- texts_all %>%
+  mutate(
+    text_norm = text %>%
+      str_replace_all("ſ", "s") %>%
+      str_replace_all("\\s+", " ") %>%
+      str_to_lower()
+  )
+
+# Preview: the first 300 characters of each text, before and after cleaning
+texts_all %>%
+  mutate(
+    before = str_sub(text, 1, 300),
+    after  = str_sub(text_norm, 1, 300)
+  ) %>%
+  select(doc_title, before, after) %>%
+  print(width = Inf)
+```
+
+Tokenizing into one row per word, removing stopwords, and keeping only words made of plain letters (this removes numbers and stray symbols).
+
+```{r}
+data("stop_words")
+
+tokens_clean <- texts_all %>%
+  select(doc_title, text_norm) %>%
+  unnest_tokens(word, text_norm) %>%
+  anti_join(stop_words, by = "word") %>%
+  filter(str_detect(word, "^[a-z]+$"))
+
+# Preview:
+head(tokens_clean, 10)
+```
+
+Checking the result: the number of words per document, and confirming that no long s remains.
+
+```{r}
+tokens_clean %>% count(doc_title)
+
+sum(str_detect(tokens_clean$word, "ſ"))
+```
+
+**Preprocessing decisions (used for both Part I and Part II):**
+
+- The long s (ſ) was converted to s.
+- Extra whitespace was collapsed and all text was lowercased.
+- Standard tidytext stopwords were removed.
+- Only tokens, made entirely of letters were kept. This removes numbers and stray symbols.
+
+After cleaning, Circle of Commerce has 12,972 words, Free Trade has 8,024, and A06785 has 12,733.
+
+### Step 2: Join tokens to the Bing sentiment dictionary
+
+Labeling each word as positive or negative using the Bing lexicon. Only words found in Bing are kept.
+
+```{r}
+bing <- get_sentiments("bing")
+
+tokens_sentiment <- tokens_clean %>%
+  inner_join(bing, by = "word", relationship = "many-to-many")
+  
+# Preview:
+head(tokens_sentiment, 10)
+```
+
+Note: a few words in the Bing lexicon are labeled both positive and negative, which is why `relationship = "many-to-many"` is set. Such a word is counted once as positive and once as negative, so it has no effect on net sentiment.
+
+Checking how many positive and negative words were found in each document.
+
+```{r}
+tokens_sentiment %>%
+  count(doc_title, sentiment)
+```
+
+### Step 3: Compute raw sentiment totals
+
+Keeping only the two texts we are comparing (Circle of Commerce & Free Trade), then collapsing to one row per document with positive, negative, and net sentiment counts.
+
+```{r}
+raw_sentiment <- tokens_sentiment %>%
+  filter(doc_title %in% c("Circle of Commerce", "Free Trade")) %>%
+  group_by(doc_title) %>%
+  summarise(
+    raw_positive = sum(sentiment == "positive"),
+    raw_negative = sum(sentiment == "negative"),
+    .groups = "drop"
+  ) %>%
+  mutate(raw_net = raw_positive - raw_negative)
+
+# Preview: the raw sentiment summary table
+raw_sentiment
+```
+
+**Observation:** Both texts have a small positive net score (67 for Circle of Commerce and 63 for Free Trade). However, Circle of Commerce is about 60% longer, so it naturally contains more sentiment words of both kinds. Raw counts do not adjust for document length.
+
+## Part II: TF-IDF-Weighted Sentiment Analysis
+
+### Step 4: Compute TF-IDF for words in each document
+
+Building the quanteda DFM from the same cleaned tokens used in Part I (tokens_clean), so the preprocessing decisions are identical. All three documents are included so that IDF has more information to work with.
+
+```{r}
+# Grouping the cleaned words into one list per document
+toks_list <- split(tokens_clean$word, tokens_clean$doc_title)
+
+# Turn that list into a quanteda tokens object
+toks <- as.tokens(toks_list)
+
+# Build the document-feature matrix (rows = documents, columns = words)
+dfm_mat <- dfm(toks)
+
+# Preview: size of the DFM and the most frequent words overall
+dfm_mat
+top_words <- topfeatures(dfm_mat, 15)
+tibble(word = names(top_words), count = top_words)
+```
+
+Applying TF-IDF weighting to the DFM, using quanteda's default settings.
+
+```{r}
+dfm_tfidf_mat <- dfm_tfidf(dfm_mat)
+
+# Preview: the TF-IDF matrix and the highest-weighted words overall
+dfm_tfidf_mat
+top_tfidf_words <- topfeatures(dfm_tfidf_mat, 15)
+tibble(word = names(top_tfidf_words), tfidf = top_tfidf_words)
+```
+
+### Step 5: Convert the TF-IDF results to a tidy table
+
+Converting the TF-IDF DFM into a regular data frame. Reshaping it to one row per document-word pair. Removing rows with zero weights. Keeping only Circle of Commerce and Free Trade.
+
+```{r}
+tfidf_tidy <- convert(dfm_tfidf_mat, to = "data.frame") %>%
+  pivot_longer(
+    cols      = -doc_id,
+    names_to  = "word",
+    values_to = "tfidf"
+  ) %>%
+  filter(tfidf > 0) %>%
+  filter(doc_id %in% c("Circle of Commerce", "Free Trade")) %>%
+  rename(doc_title = doc_id)
+
+# Preview: the highest-weighted words, and how many words each document has left
+tfidf_tidy %>%
+  arrange(desc(tfidf)) %>%
+  head(10)
+
+tfidf_tidy %>% count(doc_title)
+```
+
+### Step 6: Keep only sentiment-bearing words
+
+Joining the TF-IDF table to the Bing lexicon. This filters the existing TF-IDF results to sentiment words only. TF-IDF is not recalculated.
+
+```{r}
+tfidf_sentiment <- tfidf_tidy %>%
+  inner_join(bing, by = "word", relationship = "many-to-many")
+
+# Preview: how many sentiment words remain in each document
+tfidf_sentiment %>% count(doc_title, sentiment)
+```
+
+Inspecting the sentiment-bearing words with the highest TF-IDF weights in each document, separately for positive and negative words. These are the words that drive the TF-IDF-weighted sentiment scores.
+
+```{r}
+top_sentiment_words <- tfidf_sentiment %>%
+  group_by(doc_title, sentiment) %>%
+  slice_max(tfidf, n = 8, with_ties = FALSE) %>%
+  ungroup() %>%
+  arrange(doc_title, sentiment, desc(tfidf))
+
+top_sentiment_words %>% print(n = Inf)
+```
+
+**Observation:** After TF-IDF weighting, many of the highest-weighted sentiment words are not about trade (for example "divine", "passion", "holy" in Circle of Commerce). Some trade terms also appear to be misread by the modern Bing lexicon, for example "imposition" in Free Trade, which in this period could refer to a duty on goods.
+
+### Step 7: Compute TF-IDF-weighted sentiment totals
+
+Summing the TF-IDF weights (not counting words) of positive and negative words for each document, then calculating net TF-IDF sentiment.
+
+```{r}
+tfidf_sentiment_summary <- tfidf_sentiment %>%
+  group_by(doc_title, sentiment) %>%
+  summarise(total_tfidf = sum(tfidf), .groups = "drop") %>%
+  pivot_wider(
+    names_from  = sentiment,
+    values_from = total_tfidf,
+    values_fill = 0
+  ) %>%
+  rename(
+    tfidf_positive = positive,
+    tfidf_negative = negative
+  ) %>%
+  mutate(tfidf_net = tfidf_positive - tfidf_negative)
+
+# Preview: the TF-IDF sentiment summary table
+tfidf_sentiment_summary
+```
+
+## Part III: Compare Raw vs. TF-IDF Sentiment
+
+Combining the raw-count and TF-IDF-weighted summaries into one table (one row per document), and exporting it as a .csv file.
+
+```{r}
+sentiment_comparison <- raw_sentiment %>%
+  left_join(tfidf_sentiment_summary, by = "doc_title") %>%
+  select(
+    doc_title,
+    raw_positive, raw_negative, raw_net,
+    tfidf_positive, tfidf_negative, tfidf_net
+  ) %>%
+  mutate(across(starts_with("tfidf"), ~ round(.x, 3)))
+
+# Preview: the final comparison table
+sentiment_comparison %>% print(width = Inf)
+
+# Save the table as a .csv file in the same folder as this notebook
+write_csv(sentiment_comparison, "sentiment_comparison.csv")
+```
+
+### Which words drove the change?
+
+Finding the most frequent sentiment words in Part I that received a TF-IDF weight of zero in Part II (because they appear in all three texts). These words counted in the raw method but disappeared in the TF-IDF method.
+
+```{r}
+dropped_words <- tokens_sentiment %>%
+  filter(doc_title %in% c("Circle of Commerce", "Free Trade")) %>%
+  count(doc_title, word, sentiment, name = "raw_count") %>%
+  anti_join(tfidf_sentiment, by = c("doc_title", "word")) %>%
+  group_by(doc_title, sentiment) %>%
+  slice_max(raw_count, n = 8, with_ties = FALSE) %>%
+  ungroup() %>%
+  arrange(doc_title, sentiment, desc(raw_count))
+
+dropped_words %>% print(n = Inf)
+```
+
+1.  What changed between the two methods?
+
+The direction of the sentiment flipped. With raw counts, both texts came out slightly positive: Circle of Commerce at +67 (489 positive, 422 negative) and Free Trade at +63 (344 positive, 281 negative). Going by that alone, I would have said the two texts have almost the same tone. Once I weighted the words by TF-IDF, both texts turned negative. Circle of Commerce came to −23.31 and Free Trade at −11.50. The gap between them also got bigger. Under TF-IDF, Circle of Commerce carries about twice as much net negative weight as Free Trade, while under raw counts they were nearly equal.
+
+2.  Why did TF-IDF alter the results?
+
+TF-IDF gives zero weight to any word that shows up in all three texts, and rewards words that only show up in one or two. That turned out to matter a lot here, because many of the most common positive words are shared across all three documents. Words like "free" (29 times in Circle of Commerce), "remedy" (40 times in Free Trade) and "treasure" counted heavily in the raw method, but got a weight of zero under TF-IDF. Once those were gone, what was left were more rare words, and more of them were negative (164 negative vs 108 positive distinct words in Circle of Commerce, and 90 vs 74 in Free Trade). This does not mean the texts are negative. It means that the sentiment words each text uses on its own are mostly negative, while the sentiment words all three texts share are mostly positive. Also, with only three documents, IDF can only take three values. So a word used just a few times in one text can still get a high weight.
+
+3.  Which specific words drove the changes?
+
+I see two groups. The first is the frequent positive words that all three texts share and that TF-IDF wiped out: "free", "treasure", "benefit", "remedy" and "liberty". Several of these probably belong to the economic vocabulary of the debate rather than expressing any real feeling, which makes me question how much they should have counted in the raw score to begin with. The second group is the rare words that gained weight. In Circle of Commerce, the top negative words were "impertinent", "imperfect" and "meddle", and the top positive ones were "passion", "divine" and "affection". In Free Trade, the top negative words were "imposition" and "disorderly", and the top positive ones were "peace" and "happy". A lot of these have nothing to do with trade. Some also look misread by the Bing lexicon. "Imposition", for example, could mean a duty on goods in the 1620s, but Bing treats it as negative word.
+
+4.  When would each method be more appropriate? What limitation does document length create for the raw-count measure?
+
+Raw counts are better when I want to know how much positive and negative language a text uses in total, including the common words it shares with the other texts. TF-IDF makes more sense when I want to know what is distinctive about one text's sentiment compared to the others, for example how Misselden's tone differs from his rivals. I would not use TF-IDF to say how positive or negative one particular document is, and its results depend heavily on which documents are in the corpus. The problem with raw counts is length. A longer text will simply have more positive and more negative words. After cleaning, Circle of Commerce has 12,972 words and Free Trade has 8,024. Their raw net scores look almost the same (+67 vs +63), but per 1,000 words, Free Trade is actually more positive (about 7.9 vs 5.2). Dividing by document length would make the raw comparison fairer.
